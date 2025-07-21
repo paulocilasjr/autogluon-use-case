@@ -1,0 +1,74 @@
+input_features:
+  - name: image_path
+    type: image
+    encoder:
+      type: vit
+      model_variant: b_16
+      use_pretrained: true
+      trainable: false
+    preprocessing:
+      image:
+        train_transforms:
+          - resize_shorter_side
+          - center_crop
+          - trivial_augment
+        validation_transforms:
+          - resize_shorter_side
+          - center_crop
+        norm: imagenet
+        num_channels: 3
+        missing_value_strategy: fill_with_const
+        fill_value: 0
+
+output_features:
+  - name: label_column
+    type: category
+    decoder:
+      type: classifier
+    loss:
+      type: softmax_cross_entropy
+    preprocessing: {}
+
+combiner:
+  type: concat
+
+preprocessing:
+  split:
+    type: fixed
+    column: split
+    random_seed: 42
+  image:
+    missing_value_strategy: fill_with_const
+    fill_value: 0
+
+trainer:
+  early_stop: 10
+  epochs: 20
+  learning_rate: 0.0001
+  optimizer:
+    type: adamw
+    weight_decay: 0.001
+  learning_rate_scheduler:
+    type: cosine
+    warmup: 0.1
+    decay_rate: 0.9
+    final_learning_rate: 0
+  gradient_clipping:
+    clipglobalnorm: 1
+  train_steps: null
+
+backend:
+  gpus: 1
+  nodes: 1
+  precision: fp16
+  accelerator: auto
+  distributed_backend: ddp_fork
+  auto_select_gpus: true
+  num_workers: 2
+  prediction_num_workers: 2
+  prediction_batch_size: 4
+  fast_dev_run: false
+  deterministic: false
+  deepspeed:
+    allgather_bucket_size: 1000000000.0
+    allreduce_bucket_size: 1000000000.0
